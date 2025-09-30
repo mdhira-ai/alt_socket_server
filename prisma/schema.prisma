@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Comment {
+  commentId BigInt    @id @default(autoincrement())
+  content   String
+  createdAt DateTime  @default(now())
+  postId    BigInt
+  userId    String
+  Community Community @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  user      user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Community {
+  postId        BigInt          @id @default(autoincrement())
+  content       String
+  mediaUrl      String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime
+  userId        String
+  Comment       Comment[]
+  user          user            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Notifications Notifications[]
+  Reaction      Reaction[]
+}
+
+model Friend {
+  friendshipId               BigInt   @id @default(autoincrement())
+  status                     String   @default("pending")
+  createdAt                  DateTime @default(now())
+  userId                     String
+  friendId                   String
+  user_Friend_friendIdTouser user     @relation("Friend_friendIdTouser", fields: [friendId], references: [id], onDelete: Cascade)
+  user_Friend_userIdTouser   user     @relation("Friend_userIdTouser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+}
+
+model Message {
+  messageId                     BigInt   @id @default(autoincrement())
+  content                       String?
+  mediaUrl                      String?
+  createdAt                     DateTime @default(now())
+  isRead                        Boolean  @default(false)
+  senderId                      String
+  receiverId                    String
+  user_Message_receiverIdTouser user     @relation("Message_receiverIdTouser", fields: [receiverId], references: [id], onDelete: Cascade)
+  user_Message_senderIdTouser   user     @relation("Message_senderIdTouser", fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Notifications {
+  notificationId                   BigInt     @id @default(autoincrement())
+  type                             String
+  isRead                           Boolean    @default(false)
+  createdAt                        DateTime   @default(now())
+  userId                           String
+  actorId                          String
+  postId                           BigInt?
+  user_Notifications_actorIdTouser user       @relation("Notifications_actorIdTouser", fields: [actorId], references: [id], onDelete: Cascade)
+  Community                        Community? @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  user_Notifications_userIdTouser  user       @relation("Notifications_userIdTouser", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Reaction {
+  reactionId   BigInt    @id @default(autoincrement())
+  reactionType String
+  createdAt    DateTime  @default(now())
+  postId       BigInt
+  userId       String
+  Community    Community @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  user         user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+}
+
+model UserStatus {
+  userId   String   @id
+  isOnline Boolean  @default(false)
+  isInCall Boolean  @default(false)
+  lastSeen DateTime @default(now())
+  socketId String?  
+  user     user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime
+  user                  user      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model user {
+  username                                  String?         @unique
+  email                                     String          @unique
+  passwordHash                              String?
+  fullName                                  String?
+  profilePicture                            String?
+  language                                  String?
+  currentLevel                              String?
+  country                                   String?
+  description                               String?
+  bio                                       String?
+  createdAt                                 DateTime        @default(now())
+  updatedAt                                 DateTime
+  name                                      String
+  emailVerified                             Boolean         @default(false)
+  image                                     String?
+  id                                        String          @id
+  Comment                                   Comment[]
+  Community                                 Community[]
+  Friend_Friend_friendIdTouser              Friend[]        @relation("Friend_friendIdTouser")
+  Friend_Friend_userIdTouser                Friend[]        @relation("Friend_userIdTouser")
+  Message_Message_receiverIdTouser          Message[]       @relation("Message_receiverIdTouser")
+  Message_Message_senderIdTouser            Message[]       @relation("Message_senderIdTouser")
+  Notifications_Notifications_actorIdTouser Notifications[] @relation("Notifications_actorIdTouser")
+  Notifications_Notifications_userIdTouser  Notifications[] @relation("Notifications_userIdTouser")
+  Reaction                                  Reaction[]
+  UserStatus                                UserStatus?
+  account                                   account[]
+  session                                   session[]
+}
+
+model verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now())
+}
