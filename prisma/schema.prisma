@@ -85,7 +85,8 @@ model UserStatus {
   isOnline Boolean  @default(false)
   isInCall Boolean  @default(false)
   lastSeen DateTime @default(now())
-  socketId String?  
+  socketId String?
+  peerId   String?
   user     user     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -135,6 +136,8 @@ model user {
   emailVerified                             Boolean         @default(false)
   image                                     String?
   id                                        String          @id
+  CallTracker_Call_callerIdTouser           CallTracker[]   @relation("Call_callerIdTouser")
+  CallTracker_Call_receiverIdTouser         CallTracker[]   @relation("Call_receiverIdTouser")
   Comment                                   Comment[]
   Community                                 Community[]
   Friend_Friend_friendIdTouser              Friend[]        @relation("Friend_friendIdTouser")
@@ -147,10 +150,6 @@ model user {
   UserStatus                                UserStatus?
   account                                   account[]
   session                                   session[]
-  CallTracker_Call_callerIdTouser           CallTracker[] @relation("Call_callerIdTouser")
-  CallTracker_Call_receiverIdTouser         CallTracker[] @relation("Call_receiverIdTouser")
-
-
 }
 
 model verification {
@@ -162,20 +161,17 @@ model verification {
   updatedAt  DateTime @default(now())
 }
 
-
 model CallTracker {
-  callId      BigInt   @id @default(autoincrement())
-  callerId    String   // User who initiated the call
-  receiverId  String   // User who received the call
-  channelName String   // Unique channel identifier for the call
-  status      String   @default("ringing") // ringing, active, ended, declined, missed
-  startedAt   DateTime @default(now())
+  callId      BigInt    @id @default(autoincrement())
+  callerId    String
+  receiverId  String
+  channelName String
+  status      String    @default("ringing")
+  startedAt   DateTime  @default(now())
   endedAt     DateTime?
-  duration    Int?     // Duration in seconds (calculated when call ends)
-  
-  // Relations
-  caller      user     @relation("Call_callerIdTouser", fields: [callerId], references: [id], onDelete: Cascade)
-  receiver    user     @relation("Call_receiverIdTouser", fields: [receiverId], references: [id], onDelete: Cascade)
-  
-  @@unique([callerId, receiverId, startedAt]) // Prevent duplicate calls
+  duration    Int?
+  caller      user      @relation("Call_callerIdTouser", fields: [callerId], references: [id], onDelete: Cascade)
+  receiver    user      @relation("Call_receiverIdTouser", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([callerId, receiverId, startedAt])
 }

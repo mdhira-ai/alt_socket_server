@@ -53,11 +53,11 @@ io.on("connection", async (socket) => {
 
       console.log("Generated channel name:", channelName);
       console.log("Call data:", data.callerid, data.receiverid);
-      io.to(data.userToCall).emit("incomingCall", {
-        from: data.from,
-        name: data.name,
-        channelName: channelName, // Send the generated channel name
-      });
+    //   io.to(data.userToCall).emit("incomingCall", {
+    //     from: data.from,
+    //     name: data.name,
+    //     channelName: channelName, // Send the generated channel name
+    //   });
 
       // Create call record when call is initiated
       await createCallRecord(data.callerid, data.receiverid, channelName);
@@ -74,10 +74,10 @@ io.on("connection", async (socket) => {
       // Update user status to in call
       await incallupdate(data.to, data.from);
 
-      io.to(data.to).emit("callAccepted", {
-        from: data.from,
-        name: data.name,
-      });
+    //   io.to(data.to).emit("callAccepted", {
+    //     from: data.from,
+    //     name: data.name,
+    //   });
 
       getAllRecords().then((records) => {
         io.emit("allUsersStatus", records);
@@ -90,6 +90,8 @@ io.on("connection", async (socket) => {
   socket.on("callRejected", async (data) => {
     try {
       // Update call status to rejected
+        console.log("Call rejected data:", data);
+
       await rejectCall(data.callerid, data.receiverid);
 
       io.to(data.to).emit("callRejected", {
@@ -132,7 +134,7 @@ io.on("connection", async (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
