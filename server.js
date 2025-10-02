@@ -161,9 +161,9 @@ io.on("connection", async (socket) => {
       });
 
       await endCall(r.callerId, r.receiverId);
+      console.log(r.callerId, r.receiverId, "call record on disconnect");
     }
 
-    console.log(r.callerId, r.receiverId, "call record on disconnect");
 
     checkuserisindatabase(null, socket.id, "disconnect");
 
