@@ -1,6 +1,6 @@
 // ...existing code...
 
-const { v4: uuidv4 } = require('uuid'); // npm install uuid
+const { v4: uuidv4 } = require('uuid');
 const { prisma } = require('./prisma_connect');
 
 async function generateUniqueChannelName() {

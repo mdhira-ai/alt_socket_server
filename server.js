@@ -14,6 +14,7 @@ const {
   missedCall,
 } = require("./utils");
 const { generateUniqueChannelName } = require("./channelcheck");
+const { prisma } = require("./prisma_connect");
 
 const app = express();
 app.use(cors());
@@ -53,11 +54,11 @@ io.on("connection", async (socket) => {
 
       console.log("Generated channel name:", channelName);
       console.log("Call data:", data.callerid, data.receiverid);
-    //   io.to(data.userToCall).emit("incomingCall", {
-    //     from: data.from,
-    //     name: data.name,
-    //     channelName: channelName, // Send the generated channel name
-    //   });
+      //   io.to(data.userToCall).emit("incomingCall", {
+      //     from: data.from,
+      //     name: data.name,
+      //     channelName: channelName, // Send the generated channel name
+      //   });
 
       // Create call record when call is initiated
       await createCallRecord(data.callerid, data.receiverid, channelName);
@@ -74,10 +75,10 @@ io.on("connection", async (socket) => {
       // Update user status to in call
       await incallupdate(data.to, data.from);
 
-    //   io.to(data.to).emit("callAccepted", {
-    //     from: data.from,
-    //     name: data.name,
-    //   });
+      //   io.to(data.to).emit("callAccepted", {
+      //     from: data.from,
+      //     name: data.name,
+      //   });
 
       getAllRecords().then((records) => {
         io.emit("allUsersStatus", records);
@@ -90,7 +91,7 @@ io.on("connection", async (socket) => {
   socket.on("callRejected", async (data) => {
     try {
       // Update call status to rejected
-        console.log("Call rejected data:", data);
+      console.log("Call rejected data:", data);
 
       await rejectCall(data.callerid, data.receiverid);
 
@@ -127,14 +128,50 @@ io.on("connection", async (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("user disconnected");
+
+    // Find users in call with this socket ID first
+    const usersInCall = await prisma.userStatus.findMany({
+      where: { socketId: socket.id, isInCall: true },
+      select: { userId: true },
+    });
+
+    console.log("Users in call with this socket ID:", usersInCall);
+
+    
+    const r = await prisma.callTracker.findFirst({
+      where: {
+        OR: [
+          { callerId: usersInCall[0]?.userId, status: "active" },
+          { receiverId: usersInCall[0]?.userId, status: "active" },
+        ],
+      },
+      select: { receiverId: true, callerId: true },
+    });
+
+    if (r) {
+      await prisma.userStatus.updateMany({
+        where: {
+          userId: {
+            in: [r.callerId, r.receiverId],
+          },
+        },
+        data: { isInCall: false },
+      });
+
+      await endCall(r.callerId, r.receiverId);
+    }
+
+    console.log(r.callerId, r.receiverId, "call record on disconnect");
+
     checkuserisindatabase(null, socket.id, "disconnect");
+
     socket.broadcast.emit("userDisconnected", socket.id);
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
