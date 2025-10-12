@@ -85,6 +85,48 @@ async function signoutmethod(socketId) {
   }
 }
 
+async function disconnect(socket) {
+  try {
+    // Find users in call with this socket ID first
+    const usersInCall = await prisma.userStatus.findMany({
+      where: { socketId: socket.id, isInCall: true },
+      select: { userId: true },
+    });
+
+    console.log("Users in call with this socket ID:", usersInCall);
+
+    const r = await prisma.callTracker.findFirst({
+      where: {
+        OR: [
+          { callerId: usersInCall[0]?.userId, status: "active" },
+          { receiverId: usersInCall[0]?.userId, status: "active" },
+        ],
+      },
+      select: { receiverId: true, callerId: true },
+    });
+
+    if (r) {
+      await prisma.userStatus.updateMany({
+        where: {
+          userId: {
+            in: [r.callerId, r.receiverId],
+          },
+        },
+        data: { isInCall: false },
+      });
+
+      await endCall(r.callerId, r.receiverId);
+      console.log(r.callerId, r.receiverId, "call record on disconnect");
+    }
+
+    checkuserisindatabase(null, socket.id, "disconnect");
+
+    socket.broadcast.emit("userDisconnected", socket.id);
+  } catch (err) {
+    console.error("Error in disconnect function:", err);
+  }
+}
+
 // Read all records
 async function getAllRecords() {
   return await prisma.userStatus.findMany({
@@ -143,13 +185,12 @@ async function incallupdate(tosocketId, fromuserId) {
         where: { userId: toUser.userId },
         data: { isInCall: true },
       });
-      console.log("incallupdate - updated to user:", updatedToUser);    
+      console.log("incallupdate - updated to user:", updatedToUser);
     }
   } catch (error) {
     console.error("Error in incallupdate:", error);
   }
 }
-
 
 // Create a new call record when call is initiated
 async function createCallRecord(callerId, receiverId, channelName) {
@@ -286,7 +327,6 @@ async function missedCall(callerId, receiverId) {
   }
 }
 
-
 module.exports = {
   checkuserisindatabase,
   getAllRecords,
@@ -299,6 +339,5 @@ module.exports = {
   rejectCall,
   endCall,
   missedCall,
+  disconnect,
 };
-
-
