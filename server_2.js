@@ -6,6 +6,7 @@ const {
   checkuserisindatabase,
   getAllRecords,
   signoutmethod,
+  disconnect,
 } = require("./utils");
 
 const { generateUniqueChannelName } = require("./channelcheck");
@@ -50,15 +51,20 @@ io.on("connection", async (socket) => {
         data: { peerId: data.peerId },
       });
 
+      //   need to optimize this later
       getAllRecords().then((records) => {
         io.emit("allUsersStatus", records);
       });
-
 
       console.log("Peer ID updated successfully:", updatedUser);
     } catch (error) {
       console.error("Error updating Peer ID:", error);
     }
+  });
+
+  socket.on("disconnect", async () => {
+    console.log("User disconnected:", socket.id);
+    await disconnect(socket);
   });
 });
 
